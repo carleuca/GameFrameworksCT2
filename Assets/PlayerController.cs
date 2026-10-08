@@ -33,7 +33,6 @@ public class PlayerController : MonoBehaviour
     {
         if (context.performed && isGrounded)
         {
-            Debug.Log("A");
             rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
             animator.SetTrigger("Jump");
         }
