@@ -3,27 +3,87 @@ using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
+    [SerializeField] private Transform cameraTransform;
+    [SerializeField] private bool faceMoveDirection;
+    [SerializeField] private float moveSpeed = 5f;
+    [SerializeField] private float jumpForce = 5f;
 
-    public void OnMove(InputAction.CallbackContext context)
+    private Animator animator;
+
+    private Rigidbody rb;
+    private Vector2 moveInput;
+    private bool isGrounded;
+    void Awake()
     {
-
-        if (context.performed)
-        {
-            Vector2 moveInput = context.ReadValue<Vector2>();
-            Debug.Log($"Move Input: {moveInput}");
-
-
-        }
-
+        rb = GetComponent<Rigidbody>();
+        animator = GetComponentInChildren<Animator>();
     }
 
-    public void OnJump(InputAction.CallbackContext context)
+    void Update()
     {
-        if (context.performed)
-        {
-            Debug.Log($"Jumped {context.phase}");
-        }
-
+        UpdateAnimator();
     }
 
+    public void Move(InputAction.CallbackContext context)
+    {
+        moveInput = context.ReadValue<Vector2>();
+    }
+
+    public void Jump(InputAction.CallbackContext context)
+    {
+        if (context.performed && isGrounded)
+        {
+            Debug.Log("A");
+            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+            animator.SetTrigger("Jump");
+        }
+    }
+
+    void FixedUpdate()
+    {
+        Vector3 forward = cameraTransform.forward;
+        Vector3 right = cameraTransform.right;
+
+        forward.y = 0f;
+        right.y = 0f;
+
+        forward.Normalize();
+        right.Normalize();
+
+        Vector3 movement = forward * moveInput.y + right * moveInput.x;
+
+        Vector3 velocity = rb.linearVelocity;
+
+        velocity.x = movement.x * moveSpeed;
+        velocity.z = movement.z * moveSpeed;
+
+        rb.linearVelocity = velocity;
+
+        if (faceMoveDirection && movement.sqrMagnitude > 0.001f)
+        {
+            Quaternion targetRotation = Quaternion.LookRotation(movement, Vector3.up);
+            rb.MoveRotation(Quaternion.Slerp(rb.rotation, targetRotation, 10f * Time.fixedDeltaTime));
+        }
+    }
+
+    void OnCollisionStay(Collision collision)
+    {
+        isGrounded = true;
+    }
+
+    void OnCollisionExit(Collision collision)
+    {
+        isGrounded = false;
+    }
+
+    void UpdateAnimator()
+    {
+        if (animator == null) return;
+
+        //Convert movement input into a speed value (0 when idle, >0 when moving)
+        float currentSpeed = new Vector3(moveInput.x, 0f, moveInput.y).magnitude;
+
+        animator.SetFloat("Speed", currentSpeed);
+    }
 }
+    
